@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asistente Creativo del Blog - Versión Archivos</title>
+    <title>Asistente Creativo del Blog</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -75,15 +75,14 @@
         import { 
             BookOpen, PenTool, Mic, Camera, Download, ChevronRight, 
             CheckCircle, ArrowLeft, Send, Sparkles, FileText, Music, 
-            HelpCircle, Share2, Copy, Trash2, RotateCcw, Lock, LogOut, PlusCircle, FileUp
+            HelpCircle, Share2, Copy, Trash2, Lock, LogOut, PlusCircle, FileUp
         } from 'lucide-react';
 
         // --- CONFIGURACIÓN ---
         const GOOGLE_FORM_URL = "https://forms.gle/8BRDrCGTU4NEjw2y7";
-        const STORAGE_KEY = "blog_wizard_final_v1";
+        const STORAGE_KEY = "blog_wizard_v5";
         const PASSWORD_ACCESS = "blog"; 
 
-        // Preguntas corregidas (Lenguaje "Nosotros")
         const WRITING_QUESTIONS = [
             { id: 'topic', icon: <BookOpen className="w-6 h-6 text-indigo-500" />, question: "¿Título o tema de la actividad?", helper: "Ej: Taller de Robótica, Visita al Botánico...", placeholder: "Escribe el nombre aquí..." },
             { id: 'context', icon: <Share2 className="w-6 h-6 text-pink-500" />, question: "¿Cuándo y dónde?", helper: "Ej: 'El pasado viernes en el laboratorio'.", placeholder: "El evento tuvo lugar..." },
@@ -384,7 +383,7 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                 );
             }
 
-            // 4. PREGUNTAS (WIZARD)
+            // 4. PREGUNTAS (WIZARD) - SOLO SI ELIGIERON "CREAR NOTICIA"
             if (step === 'questions') {
                 const q = WRITING_QUESTIONS[currentQuestionIndex];
                 const progress = ((currentQuestionIndex + 1) / WRITING_QUESTIONS.length) * 100;
@@ -441,7 +440,7 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                 );
             }
 
-            // 5. RESULTADO / EDICIÓN
+            // 5. RESULTADO / EDICIÓN (SOLO NOTICIA)
             if (step === 'result') {
                 return (
                     <Background>
@@ -515,6 +514,7 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
             // 6. UPLOAD DIRECTO (Fotos/Podcast)
             if (step === 'direct-upload') {
                 const isPodcast = selectedOption === 'podcast';
+                // Restauramos los estilos y textos específicos para cada opción
                 const styles = isPodcast 
                     ? { bg: 'bg-amber-500', light: 'bg-amber-50', text: 'text-amber-500', btn: 'bg-amber-500 hover:bg-amber-600' }
                     : { bg: 'bg-pink-500', light: 'bg-pink-50', text: 'text-pink-500', btn: 'bg-pink-500 hover:bg-pink-600' };
@@ -529,13 +529,22 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                             
                             <div className="p-8">
                                 <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                    <CheckCircle className={`w-5 h-5 ${styles.text}`} /> Antes de ir al formulario:
+                                    <CheckCircle className={`w-5 h-5 ${styles.text}`} /> Checklist Rápido:
                                 </h3>
                                 
+                                {/* Restaurada la lógica específica de checklists */}
                                 <div className="space-y-3 mb-8">
                                     <div className={`p-4 rounded-xl ${styles.light} flex gap-3 text-sm text-slate-700`}>
                                         <div className="min-w-[4px] bg-slate-800 rounded-full opacity-20"></div>
-                                        <p>Asegúrate de tener tus archivos {isPodcast ? "(MP3/WAV)" : "(JPG/PNG)"} listos en este dispositivo.</p>
+                                        {isPodcast 
+                                        ? "Revisa que no haya ruido de fondo y las voces se entiendan." 
+                                        : "Elige solo las 5-10 mejores fotos. ¡Enfoque y luz!"}
+                                    </div>
+                                    <div className={`p-4 rounded-xl ${styles.light} flex gap-3 text-sm text-slate-700`}>
+                                        <div className="min-w-[4px] bg-slate-800 rounded-full opacity-20"></div>
+                                        {isPodcast
+                                        ? "Ten apuntados los nombres de los entrevistados."
+                                        : "Asegúrate de saber quién aparece en las fotos."}
                                     </div>
                                 </div>
 
@@ -544,7 +553,7 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                                 </a>
                                 
                                 <button onClick={() => setStep('menu')} className="mt-6 text-slate-400 hover:text-slate-600 text-sm w-full">
-                                    Cancelar
+                                    Cancelar y volver
                                 </button>
                             </div>
                         </Card>
