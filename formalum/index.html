@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asistente Creativo del Blog 2.0</title>
+    <title>Asistente Creativo del Blog 3.0</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -15,7 +15,8 @@
                         blob: "blob 7s infinite",
                         fadeIn: "fadeIn 0.5s ease-out forwards",
                         bounce: "bounce 1s infinite",
-                        slideUp: "slideUp 0.3s ease-out forwards"
+                        slideUp: "slideUp 0.3s ease-out forwards",
+                        shake: "shake 0.5s cubic-bezier(.36,.07,.19,.97) both"
                     },
                     keyframes: {
                         blob: {
@@ -31,6 +32,12 @@
                         slideUp: {
                             "0%": { opacity: "0", transform: "translateY(20px)" },
                             "100%": { opacity: "1", transform: "translateY(0)" }
+                        },
+                        shake: {
+                            "10%, 90%": { transform: "translate3d(-1px, 0, 0)" },
+                            "20%, 80%": { transform: "translate3d(2px, 0, 0)" },
+                            "30%, 50%, 70%": { transform: "translate3d(-4px, 0, 0)" },
+                            "40%, 60%": { transform: "translate3d(4px, 0, 0)" }
                         }
                     }
                 }
@@ -55,8 +62,6 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-        
-        /* Animación suave para el textarea */
         textarea { transition: border-color 0.2s, box-shadow 0.2s; }
     </style>
 </head>
@@ -65,26 +70,27 @@
     <div id="root"></div>
 
     <script type="text/babel" data-type="module">
-        import React, { useState, useEffect, useRef } from 'react';
+        import React, { useState, useEffect } from 'react';
         import { createRoot } from 'react-dom/client';
         import { 
             BookOpen, PenTool, Mic, Camera, Download, ChevronRight, 
             CheckCircle, ArrowLeft, Send, Sparkles, FileText, Music, 
-            HelpCircle, Share2, Copy, Trash2, RotateCcw
+            HelpCircle, Share2, Copy, Trash2, RotateCcw, Lock, LogOut, PlusCircle
         } from 'lucide-react';
 
-        // --- Constantes y Datos ---
+        // --- CONFIGURACIÓN ---
         const GOOGLE_FORM_URL = "https://forms.gle/8BRDrCGTU4NEjw2y7";
-        const STORAGE_KEY = "blog_wizard_data";
+        const STORAGE_KEY = "blog_wizard_data_v3";
+        const PASSWORD_ACCESS = "blog"; // <--- CAMBIA ESTO POR LA CONTRASEÑA QUE QUIERAS
 
         const WRITING_QUESTIONS = [
             { id: 'topic', icon: <BookOpen className="w-6 h-6 text-indigo-500" />, question: "¿Título o tema de la actividad?", helper: "Ej: Taller de Robótica, Visita al Botánico...", placeholder: "Escribe el nombre aquí..." },
             { id: 'context', icon: <Share2 className="w-6 h-6 text-pink-500" />, question: "¿Cuándo y dónde?", helper: "Ej: 'El pasado viernes en el laboratorio'.", placeholder: "El evento tuvo lugar..." },
             { id: 'participants', icon: <Sparkles className="w-6 h-6 text-yellow-500" />, question: "¿Quiénes participaron?", helper: "Alumnos, profesores, invitados...", placeholder: "Acudieron los alumnos de..." },
-            { id: 'objective', icon: <HelpCircle className="w-6 h-6 text-blue-500" />, question: "¿Cuál era el objetivo?", helper: "¿Para qué se hizo? ¿Qué querían aprender?", placeholder: "El objetivo principal era..." },
-            { id: 'highlights', icon: <FileText className="w-6 h-6 text-emerald-500" />, question: "¿Qué actividades hicisteis?", helper: "Cuenta los pasos principales.", placeholder: "Primero hicimos..., luego..." },
-            { id: 'quotes', icon: <Mic className="w-6 h-6 text-orange-500" />, question: "¿Frase o anécdota top?", helper: "Algo memorable o divertido.", placeholder: "Lo más comentado fue..." },
-            { id: 'conclusion', icon: <CheckCircle className="w-6 h-6 text-purple-500" />, question: "¿Conclusión final?", helper: "¿Opinión personal? ¿Repetirías?", placeholder: "En definitiva, fue..." },
+            { id: 'objective', icon: <HelpCircle className="w-6 h-6 text-blue-500" />, question: "¿Cuál era el objetivo?", helper: "¿Para qué se hizo? ¿Qué queríamos aprender?", placeholder: "El objetivo principal era..." },
+            { id: 'highlights', icon: <FileText className="w-6 h-6 text-emerald-500" />, question: "¿Qué actividades hicimos?", helper: "Cuenta los pasos principales.", placeholder: "Primero hicimos..., luego..." },
+            { id: 'quotes', icon: <Mic className="w-6 h-6 text-orange-500" />, question: "¿Frase o anécdota destacada?", helper: "Algo memorable o divertido.", placeholder: "Lo más comentado fue..." },
+            { id: 'conclusion', icon: <CheckCircle className="w-6 h-6 text-purple-500" />, question: "¿Conclusión final?", helper: "¿Opinión personal? ¿Repetiríais?", placeholder: "En definitiva, fue..." },
             { id: 'multimedia', icon: <Camera className="w-6 h-6 text-red-500" />, question: "Archivos adjuntos", helper: "¿Qué fotos/audios vas a subir al formulario?", placeholder: "Adjuntaré fotos de..." }
         ];
 
@@ -112,9 +118,8 @@
                 primary: "bg-slate-900 text-white hover:bg-slate-800 hover:shadow-lg disabled:bg-slate-300 disabled:cursor-not-allowed disabled:shadow-none",
                 secondary: "bg-white text-slate-700 border-2 border-slate-200 hover:border-slate-800 hover:bg-slate-50",
                 ghost: "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50",
-                success: "bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg hover:shadow-emerald-500/30"
+                danger: "bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 hover:border-red-200"
             };
-            
             return (
                 <button onClick={onClick} disabled={disabled} className={`${baseStyles} ${variants[variant]} ${className}`}>
                     {children}
@@ -124,7 +129,11 @@
 
         // --- App Principal ---
         function App() {
-            // Estado
+            // Estados
+            const [isAuthenticated, setIsAuthenticated] = useState(false);
+            const [passwordInput, setPasswordInput] = useState("");
+            const [loginError, setLoginError] = useState(false);
+            
             const [step, setStep] = useState('welcome');
             const [selectedOption, setSelectedOption] = useState(null);
             const [answers, setAnswers] = useState({});
@@ -148,7 +157,7 @@
 
             // Guardar datos al cambiar
             useEffect(() => {
-                if (step !== 'welcome') {
+                if (isAuthenticated && step !== 'welcome') {
                     localStorage.setItem(STORAGE_KEY, JSON.stringify({
                         step,
                         answers,
@@ -156,30 +165,47 @@
                         currentQuestionIndex
                     }));
                 }
-            }, [step, answers, selectedOption, currentQuestionIndex]);
+            }, [step, answers, selectedOption, currentQuestionIndex, isAuthenticated]);
 
-            // Handlers
-            const handleStart = () => setStep('menu');
+            // --- Lógica de Login y Reset ---
 
-            const handleReset = () => {
-                if(confirm("¿Seguro que quieres borrar todo y empezar de cero?")) {
-                    localStorage.removeItem(STORAGE_KEY);
-                    setAnswers({});
-                    setCurrentQuestionIndex(0);
-                    setStep('welcome');
-                    setSelectedOption(null);
+            const handleLogin = (e) => {
+                e.preventDefault();
+                if (passwordInput.toLowerCase() === PASSWORD_ACCESS.toLowerCase()) {
+                    setIsAuthenticated(true);
+                    setLoginError(false);
+                } else {
+                    setLoginError(true);
+                    setTimeout(() => setLoginError(false), 500);
                 }
             };
 
+            const handleFullReset = () => {
+                if(confirm("¿Quieres borrar todo y crear un evento nuevo?")) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    setAnswers({});
+                    setCurrentQuestionIndex(0);
+                    setGeneratedText('');
+                    setSelectedOption(null);
+                    setStep('menu'); // Volvemos al menú directamente
+                    window.scrollTo(0,0);
+                }
+            };
+
+            const handleLogout = () => {
+                 setIsAuthenticated(false);
+                 setPasswordInput("");
+            };
+
+            // --- Lógica del Flujo ---
+            const handleStart = () => setStep('menu');
             const handleOptionSelect = (option) => {
                 setSelectedOption(option);
                 setStep(option === 'write' ? 'questions' : 'direct-upload');
             };
-
             const handleAnswerChange = (e) => {
                 setAnswers({ ...answers, [WRITING_QUESTIONS[currentQuestionIndex].id]: e.target.value });
             };
-
             const nextQuestion = () => {
                 if (currentQuestionIndex < WRITING_QUESTIONS.length - 1) {
                     setCurrentQuestionIndex(prev => prev + 1);
@@ -188,7 +214,6 @@
                     setStep('result');
                 }
             };
-
             const prevQuestion = () => {
                 if (currentQuestionIndex > 0) {
                     setCurrentQuestionIndex(prev => prev - 1);
@@ -200,8 +225,6 @@
             const prepareFinalText = () => {
                 const title = answers.topic ? answers.topic.toUpperCase() : 'SIN TÍTULO';
                 const date = new Date().toLocaleDateString();
-                
-                // Si ya existe texto editado, no lo sobrescribimos a menos que esté vacío
                 if (generatedText) return;
 
                 const text = `BORRADOR DE NOTICIA
@@ -218,7 +241,7 @@ El objetivo era: ${answers.objective || '...'}.
 Desarrollo: ${answers.highlights || '...'}.
 
 (DETALLES)
-La anécdota: ${answers.quotes || '...'}.
+Anécdota destacada: ${answers.quotes || '...'}.
 
 (CIERRE)
 Conclusión: ${answers.conclusion || '...'}.
@@ -235,7 +258,7 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                     setShowCopiedToast(true);
                     setTimeout(() => setShowCopiedToast(false), 2000);
                 } catch (err) {
-                    alert('No se pudo copiar automáticamente.');
+                    alert('Selecciona el texto manualmente para copiarlo.');
                 }
             };
 
@@ -249,17 +272,56 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                 document.body.removeChild(element);
             };
 
-            // --- Vistas ---
+            // --- VISTAS ---
 
+            // 1. LOGIN / PORTADA
+            if (!isAuthenticated) {
+                return (
+                    <Background>
+                        <Card className="max-w-md p-10 text-center">
+                            <div className="mx-auto w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-6">
+                                <Lock className="w-10 h-10 text-slate-400" />
+                            </div>
+                            <h1 className="text-2xl font-bold text-slate-800 mb-2">Acceso Reporteros</h1>
+                            <p className="text-slate-500 mb-8">Introduce la clave del aula para entrar.</p>
+                            
+                            <form onSubmit={handleLogin} className="space-y-4">
+                                <div className={loginError ? "animate-shake" : ""}>
+                                    <input 
+                                        type="password" 
+                                        value={passwordInput}
+                                        onChange={(e) => setPasswordInput(e.target.value)}
+                                        placeholder="Contraseña..."
+                                        className={`w-full p-4 rounded-xl border-2 text-center text-lg outline-none transition-colors ${
+                                            loginError 
+                                            ? "border-red-300 bg-red-50 text-red-900 placeholder-red-300" 
+                                            : "border-slate-200 focus:border-violet-500 focus:bg-white bg-slate-50"
+                                        }`}
+                                        autoFocus
+                                    />
+                                </div>
+                                <Button className="w-full py-4 shadow-xl" onClick={handleLogin}>
+                                    Entrar
+                                </Button>
+                            </form>
+                            <p className="mt-6 text-xs text-slate-400">Pista: la clave es 'blog'</p>
+                        </Card>
+                    </Background>
+                );
+            }
+
+            // 2. BIENVENIDA
             if (step === 'welcome') {
                 return (
                     <Background>
+                        <button onClick={handleLogout} className="absolute top-6 right-6 text-slate-400 hover:text-slate-700 flex items-center gap-2 text-sm bg-white/50 px-3 py-2 rounded-full transition-colors z-20">
+                            <LogOut size={14} /> Salir
+                        </button>
                         <Card className="text-center p-12 relative">
-                             {/* Botón flotante de reset si hay datos antiguos pero estamos en welcome */}
                             {Object.keys(answers).length > 0 && (
-                                <button onClick={() => setStep('menu')} className="absolute top-4 right-4 text-xs bg-slate-100 px-3 py-1 rounded-full text-slate-500 hover:bg-slate-200">
-                                    Recuperar sesión anterior
-                                </button>
+                                <div className="absolute top-0 left-0 w-full bg-yellow-100 text-yellow-800 text-xs py-1 font-bold">
+                                    ¡Tienes un borrador guardado!
+                                </div>
                             )}
                             <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-3xl mb-8 shadow-lg shadow-indigo-500/30 rotate-3 hover:rotate-6 transition-transform duration-300">
                                 <BookOpen className="w-12 h-12 text-white" />
@@ -269,17 +331,19 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                             </h1>
                             <p className="text-lg text-slate-600 mb-10 max-w-md mx-auto leading-relaxed">
                                 Convierte tus experiencias en noticias increíbles para el blog. 
-                                Te ayudaré a estructurar tus ideas en minutos.
                             </p>
-                            <Button onClick={handleStart} className="text-lg px-8 py-4 shadow-xl hover:shadow-2xl hover:-translate-y-1">
-                                <span>Empezar ahora</span>
-                                <ChevronRight className="w-5 h-5 ml-2" />
-                            </Button>
+                            <div className="flex flex-col gap-4">
+                                <Button onClick={handleStart} className="text-lg px-8 py-4 shadow-xl hover:shadow-2xl hover:-translate-y-1">
+                                    <span>{Object.keys(answers).length > 0 ? "Continuar Editando" : "Empezar Noticia"}</span>
+                                    <ChevronRight className="w-5 h-5 ml-2" />
+                                </Button>
+                            </div>
                         </Card>
                     </Background>
                 );
             }
 
+            // 3. MENÚ
             if (step === 'menu') {
                 return (
                     <Background>
@@ -288,12 +352,17 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                                 <Button variant="ghost" onClick={() => setStep('welcome')} className="px-0">
                                     <ArrowLeft size={16} /> Atrás
                                 </Button>
-                                <button onClick={handleReset} className="text-red-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50 transition-colors" title="Borrar todo">
-                                    <Trash2 size={18} />
+                                {/* Botón Reset Visible */}
+                                <button 
+                                    onClick={handleFullReset} 
+                                    className="flex items-center gap-2 text-red-400 hover:text-red-600 px-3 py-2 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium" 
+                                    title="Borrar todo"
+                                >
+                                    <Trash2 size={16} /> Limpiar todo
                                 </button>
                             </div>
                             
-                            <h2 className="text-3xl font-bold text-slate-800 mb-2 text-center">¿Qué vas a enviar hoy?</h2>
+                            <h2 className="text-3xl font-bold text-slate-800 mb-2 text-center">Menú Principal</h2>
                             <p className="text-center text-slate-500 mb-8">Elige el formato de tu publicación</p>
                             
                             <div className="grid gap-4">
@@ -323,6 +392,7 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                 );
             }
 
+            // 4. PREGUNTAS (WIZARD)
             if (step === 'questions') {
                 const q = WRITING_QUESTIONS[currentQuestionIndex];
                 const progress = ((currentQuestionIndex + 1) / WRITING_QUESTIONS.length) * 100;
@@ -331,22 +401,17 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                 return (
                     <Background>
                         <Card className="flex flex-col min-h-[600px] w-full max-w-2xl">
-                            {/* Barra de Progreso */}
                             <div className="px-8 py-6 border-b border-slate-100 bg-slate-50/50">
                                 <div className="flex justify-between items-end mb-3">
                                     <span className="text-xs font-bold text-violet-600 tracking-wider uppercase bg-violet-100 px-2 py-1 rounded">
                                         Paso {currentQuestionIndex + 1} de {WRITING_QUESTIONS.length}
                                     </span>
-                                    <button onClick={handleReset} className="text-slate-400 hover:text-red-500 text-xs flex items-center gap-1 transition-colors">
-                                        <RotateCcw size={12} /> Reiniciar
-                                    </button>
                                 </div>
                                 <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
                                     <div className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
                                 </div>
                             </div>
 
-                            {/* Área de Pregunta */}
                             <div className="flex-1 p-8 flex flex-col justify-center animate-fadeIn key={currentQuestionIndex}">
                                 <div className="flex items-center gap-4 mb-6">
                                     <div className="p-3 bg-slate-100 rounded-xl shadow-sm">
@@ -369,7 +434,6 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                                 </div>
                             </div>
 
-                            {/* Footer Navegación */}
                             <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center">
                                 <Button variant="ghost" onClick={prevQuestion}>
                                     <ArrowLeft size={20} /> <span className="hidden sm:inline">Anterior</span>
@@ -385,20 +449,19 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                 );
             }
 
+            // 5. RESULTADO / EDICIÓN
             if (step === 'result') {
                 return (
                     <Background>
                         <Card className="w-full max-w-3xl">
-                            {/* Header Éxito */}
                             <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-8 text-center text-white relative overflow-hidden">
                                 <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
                                 <CheckCircle className="w-16 h-16 mx-auto mb-4 drop-shadow-md animate-bounce" />
                                 <h2 className="text-3xl font-bold relative z-10">¡Borrador Listo!</h2>
-                                <p className="opacity-90 relative z-10 mt-2">Revisa el texto, cópialo y envíalo.</p>
+                                <p className="opacity-90 relative z-10 mt-2">Revisa, copia y envía.</p>
                             </div>
 
                             <div className="p-8 grid md:grid-cols-2 gap-8">
-                                {/* Columna Izquierda: Editor */}
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">
                                         <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tu Texto (Editable)</h3>
@@ -426,17 +489,13 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                                     </button>
                                 </div>
 
-                                {/* Columna Derecha: Acciones */}
-                                <div className="flex flex-col justify-center space-y-6">
-                                    <div className="bg-indigo-50 border border-indigo-100 p-5 rounded-2xl">
-                                        <h4 className="font-bold text-indigo-900 mb-2 flex items-center gap-2">
-                                            <span className="bg-indigo-200 text-indigo-700 w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span>
-                                            Siguientes pasos:
-                                        </h4>
-                                        <ul className="text-sm text-indigo-800 space-y-2 ml-2">
-                                            <li className="flex gap-2"><CheckCircle size={14} className="mt-0.5 opacity-50"/> Copia el texto de la izquierda.</li>
-                                            <li className="flex gap-2"><CheckCircle size={14} className="mt-0.5 opacity-50"/> Abre el Formulario Google.</li>
-                                            <li className="flex gap-2"><CheckCircle size={14} className="mt-0.5 opacity-50"/> Pega el texto y sube tus fotos.</li>
+                                <div className="flex flex-col justify-center space-y-4">
+                                    <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl">
+                                        <h4 className="font-bold text-indigo-900 mb-2 text-sm">Pasos para terminar:</h4>
+                                        <ul className="text-xs text-indigo-800 space-y-1 ml-1">
+                                            <li className="flex gap-2">1. Copia el texto.</li>
+                                            <li className="flex gap-2">2. Abre el Formulario Google.</li>
+                                            <li className="flex gap-2">3. Pega y sube las fotos.</li>
                                         </ul>
                                     </div>
 
@@ -444,13 +503,18 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                                         href={GOOGLE_FORM_URL}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="group w-full flex items-center justify-center gap-3 bg-slate-900 text-white font-bold py-4 px-6 rounded-xl hover:bg-slate-800 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
+                                        className="group w-full flex items-center justify-center gap-3 bg-slate-900 text-white font-bold py-3 px-6 rounded-xl hover:bg-slate-800 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
                                     >
-                                        Ir al Formulario <Send size={20} className="group-hover:translate-x-1 transition-transform"/>
+                                        Ir al Formulario <Send size={18} className="group-hover:translate-x-1 transition-transform"/>
                                     </a>
 
-                                    <button onClick={() => setStep('menu')} className="text-slate-400 hover:text-slate-600 text-sm font-medium transition-colors">
-                                        Volver al inicio
+                                    <div className="h-px bg-slate-100 my-2"></div>
+
+                                    <button 
+                                        onClick={handleFullReset}
+                                        className="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-emerald-600 bg-slate-50 hover:bg-emerald-50 py-3 px-4 rounded-xl font-bold transition-colors border border-slate-200 hover:border-emerald-200"
+                                    >
+                                        <PlusCircle size={18} /> ✨ Finalizar y crear otro
                                     </button>
                                 </div>
                             </div>
@@ -459,7 +523,7 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                 );
             }
 
-            // Vista "Subida Directa" (Fotos/Podcast)
+            // 6. UPLOAD DIRECTO
             if (step === 'direct-upload') {
                 const isPodcast = selectedOption === 'podcast';
                 const styles = isPodcast 
@@ -476,17 +540,13 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                             
                             <div className="p-8">
                                 <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                    <CheckCircle className={`w-5 h-5 ${styles.text}`} /> Checklist Rápido:
+                                    <CheckCircle className={`w-5 h-5 ${styles.text}`} /> Lista de verificación:
                                 </h3>
                                 
                                 <div className="space-y-3 mb-8">
                                     <div className={`p-4 rounded-xl ${styles.light} flex gap-3 text-sm text-slate-700`}>
                                         <div className="min-w-[4px] bg-slate-800 rounded-full opacity-20"></div>
                                         {isPodcast ? "Revisa que no haya ruido de fondo." : "Elige solo las 5-10 mejores fotos."}
-                                    </div>
-                                    <div className={`p-4 rounded-xl ${styles.light} flex gap-3 text-sm text-slate-700`}>
-                                        <div className="min-w-[4px] bg-slate-800 rounded-full opacity-20"></div>
-                                        {isPodcast ? "Ten a mano los nombres de los entrevistados." : "Prepara un pequeño pie de foto."}
                                     </div>
                                 </div>
 
