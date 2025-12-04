@@ -3,12 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asistente Creativo del Blog</title>
+    <title>Asistente Creativo del Blog 2.0</title>
     
-    <!-- 1. Cargar Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- 2. Configurar Tailwind (Animaciones personalizadas) -->
     <script>
         tailwind.config = {
             theme: {
@@ -16,7 +14,8 @@
                     animation: {
                         blob: "blob 7s infinite",
                         fadeIn: "fadeIn 0.5s ease-out forwards",
-                        bounce: "bounce 1s infinite"
+                        bounce: "bounce 1s infinite",
+                        slideUp: "slideUp 0.3s ease-out forwards"
                     },
                     keyframes: {
                         blob: {
@@ -28,6 +27,10 @@
                         fadeIn: {
                             "0%": { opacity: "0", transform: "translateY(10px)" },
                             "100%": { opacity: "1", transform: "translateY(0)" }
+                        },
+                        slideUp: {
+                            "0%": { opacity: "0", transform: "translateY(20px)" },
+                            "100%": { opacity: "1", transform: "translateY(0)" }
                         }
                     }
                 }
@@ -35,7 +38,6 @@
         }
     </script>
 
-    <!-- 3. Import Map para React y Lucide (Iconos) -->
     <script type="importmap">
     {
         "imports": {
@@ -46,223 +48,200 @@
     }
     </script>
 
-    <!-- 4. Cargar Babel para entender JSX -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
     <style>
-        /* Estilos extra para scrollbar personalizado */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 4px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
-
-        /* Delays para las animaciones de los blobs */
-        .animation-delay-2000 {
-            animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-            animation-delay: 4s;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Animación suave para el textarea */
+        textarea { transition: border-color 0.2s, box-shadow 0.2s; }
     </style>
 </head>
-<body class="bg-slate-50">
+<body class="bg-slate-50 text-slate-800">
 
-    <!-- El contenedor donde React montará la app -->
     <div id="root"></div>
 
-    <!-- 5. Tu código de la aplicación -->
     <script type="text/babel" data-type="module">
-        import React, { useState, useEffect } from 'react';
+        import React, { useState, useEffect, useRef } from 'react';
         import { createRoot } from 'react-dom/client';
         import { 
             BookOpen, PenTool, Mic, Camera, Download, ChevronRight, 
             CheckCircle, ArrowLeft, Send, Sparkles, FileText, Music, 
-            HelpCircle, Share2 
+            HelpCircle, Share2, Copy, Trash2, RotateCcw
         } from 'lucide-react';
 
+        // --- Constantes y Datos ---
+        const GOOGLE_FORM_URL = "https://forms.gle/8BRDrCGTU4NEjw2y7";
+        const STORAGE_KEY = "blog_wizard_data";
+
+        const WRITING_QUESTIONS = [
+            { id: 'topic', icon: <BookOpen className="w-6 h-6 text-indigo-500" />, question: "¿Título o tema de la actividad?", helper: "Ej: Taller de Robótica, Visita al Botánico...", placeholder: "Escribe el nombre aquí..." },
+            { id: 'context', icon: <Share2 className="w-6 h-6 text-pink-500" />, question: "¿Cuándo y dónde?", helper: "Ej: 'El pasado viernes en el laboratorio'.", placeholder: "El evento tuvo lugar..." },
+            { id: 'participants', icon: <Sparkles className="w-6 h-6 text-yellow-500" />, question: "¿Quiénes participaron?", helper: "Alumnos, profesores, invitados...", placeholder: "Acudieron los alumnos de..." },
+            { id: 'objective', icon: <HelpCircle className="w-6 h-6 text-blue-500" />, question: "¿Cuál era el objetivo?", helper: "¿Para qué se hizo? ¿Qué querían aprender?", placeholder: "El objetivo principal era..." },
+            { id: 'highlights', icon: <FileText className="w-6 h-6 text-emerald-500" />, question: "¿Qué actividades hicisteis?", helper: "Cuenta los pasos principales.", placeholder: "Primero hicimos..., luego..." },
+            { id: 'quotes', icon: <Mic className="w-6 h-6 text-orange-500" />, question: "¿Frase o anécdota top?", helper: "Algo memorable o divertido.", placeholder: "Lo más comentado fue..." },
+            { id: 'conclusion', icon: <CheckCircle className="w-6 h-6 text-purple-500" />, question: "¿Conclusión final?", helper: "¿Opinión personal? ¿Repetirías?", placeholder: "En definitiva, fue..." },
+            { id: 'multimedia', icon: <Camera className="w-6 h-6 text-red-500" />, question: "Archivos adjuntos", helper: "¿Qué fotos/audios vas a subir al formulario?", placeholder: "Adjuntaré fotos de..." }
+        ];
+
+        // --- Componentes UI ---
+        const Background = ({ children }) => (
+            <div className="min-h-screen bg-slate-50 relative overflow-hidden font-sans text-slate-800 selection:bg-violet-200 selection:text-violet-900">
+                <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
+                <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-yellow-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
+                <div className="absolute bottom-[-20%] left-[20%] w-96 h-96 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
+                <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4">
+                    {children}
+                </div>
+            </div>
+        );
+
+        const Card = ({ children, className = "" }) => (
+            <div className={`bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 w-full max-w-2xl overflow-hidden animate-slideUp ${className}`}>
+                {children}
+            </div>
+        );
+
+        const Button = ({ onClick, children, variant = 'primary', className = "", disabled = false }) => {
+            const baseStyles = "flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all transform active:scale-95";
+            const variants = {
+                primary: "bg-slate-900 text-white hover:bg-slate-800 hover:shadow-lg disabled:bg-slate-300 disabled:cursor-not-allowed disabled:shadow-none",
+                secondary: "bg-white text-slate-700 border-2 border-slate-200 hover:border-slate-800 hover:bg-slate-50",
+                ghost: "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50",
+                success: "bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg hover:shadow-emerald-500/30"
+            };
+            
+            return (
+                <button onClick={onClick} disabled={disabled} className={`${baseStyles} ${variants[variant]} ${className}`}>
+                    {children}
+                </button>
+            );
+        };
+
+        // --- App Principal ---
         function App() {
+            // Estado
             const [step, setStep] = useState('welcome');
             const [selectedOption, setSelectedOption] = useState(null);
             const [answers, setAnswers] = useState({});
             const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+            const [generatedText, setGeneratedText] = useState('');
+            const [showCopiedToast, setShowCopiedToast] = useState(false);
 
-            const googleFormUrl = "https://forms.gle/8BRDrCGTU4NEjw2y7";
-
-            const writingQuestions = [
-                {
-                    id: 'topic',
-                    icon: <BookOpen className="w-6 h-6 text-indigo-500" />,
-                    question: "¿Título o tema de la actividad?",
-                    helper: "Ej: Taller de Robótica, Visita al Botánico...",
-                    placeholder: "Escribe el nombre aquí..."
-                },
-                {
-                    id: 'context',
-                    icon: <Share2 className="w-6 h-6 text-pink-500" />,
-                    question: "¿Cuándo y dónde?",
-                    helper: "Ej: 'El pasado viernes en el laboratorio'.",
-                    placeholder: "El evento tuvo lugar..."
-                },
-                {
-                    id: 'participants',
-                    icon: <Sparkles className="w-6 h-6 text-yellow-500" />,
-                    question: "¿Quiénes participaron?",
-                    helper: "Alumnos, profesores, invitados...",
-                    placeholder: "Acudieron los alumnos de..."
-                },
-                {
-                    id: 'objective',
-                    icon: <HelpCircle className="w-6 h-6 text-blue-500" />,
-                    question: "¿Cuál era el objetivo?",
-                    helper: "¿Para qué se hizo? ¿Qué querían aprender?",
-                    placeholder: "El objetivo principal era..."
-                },
-                {
-                    id: 'highlights',
-                    icon: <FileText className="w-6 h-6 text-emerald-500" />,
-                    question: "¿Qué actividades hicisteis?",
-                    helper: "Cuenta los pasos principales.",
-                    placeholder: "Primero hicimos..., luego..."
-                },
-                {
-                    id: 'quotes',
-                    icon: <Mic className="w-6 h-6 text-orange-500" />,
-                    question: "¿Frase o anécdota top?",
-                    helper: "Algo memorable o divertido.",
-                    placeholder: "Lo más comentado fue..."
-                },
-                {
-                    id: 'conclusion',
-                    icon: <CheckCircle className="w-6 h-6 text-purple-500" />,
-                    question: "Conclusión final",
-                    helper: "¿Opinión personal? ¿Repetirías?",
-                    placeholder: "En definitiva, fue..."
-                },
-                {
-                    id: 'multimedia',
-                    icon: <Camera className="w-6 h-6 text-red-500" />,
-                    question: "Archivos adjuntos",
-                    helper: "¿Qué fotos/audios vas a subir?",
-                    placeholder: "Adjunto fotos de..."
-                }
-            ];
-
-            // --- Cargar estado guardado al iniciar ---
+            // Cargar datos al inicio
             useEffect(() => {
-                const saved = localStorage.getItem("reporterosState");
-                if (saved) {
-                    try {
-                        const parsed = JSON.parse(saved);
-                        if (parsed.step) setStep(parsed.step);
-                        if (parsed.selectedOption) setSelectedOption(parsed.selectedOption);
-                        if (parsed.answers) setAnswers(parsed.answers);
-                        if (typeof parsed.currentQuestionIndex === "number") {
-                            setCurrentQuestionIndex(parsed.currentQuestionIndex);
-                        }
-                    } catch (e) {
-                        console.error("Error al leer estado guardado", e);
+                const savedData = localStorage.getItem(STORAGE_KEY);
+                if (savedData) {
+                    const parsed = JSON.parse(savedData);
+                    setAnswers(parsed.answers || {});
+                    if(parsed.step && parsed.step !== 'welcome') {
+                        setStep(parsed.step);
+                        setSelectedOption(parsed.selectedOption);
+                        setCurrentQuestionIndex(parsed.currentQuestionIndex || 0);
                     }
                 }
             }, []);
 
-            // --- Guardar estado cada vez que cambie algo importante ---
+            // Guardar datos al cambiar
             useEffect(() => {
-                const stateToSave = {
-                    step,
-                    selectedOption,
-                    answers,
-                    currentQuestionIndex
-                };
-                localStorage.setItem("reporterosState", JSON.stringify(stateToSave));
-            }, [step, selectedOption, answers, currentQuestionIndex]);
+                if (step !== 'welcome') {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                        step,
+                        answers,
+                        selectedOption,
+                        currentQuestionIndex
+                    }));
+                }
+            }, [step, answers, selectedOption, currentQuestionIndex]);
 
+            // Handlers
             const handleStart = () => setStep('menu');
 
-            const handleOptionSelect = (option) => {
-                setSelectedOption(option);
-                if (option === 'write') {
-                    setStep('questions');
-                } else {
-                    setStep('direct-upload');
+            const handleReset = () => {
+                if(confirm("¿Seguro que quieres borrar todo y empezar de cero?")) {
+                    localStorage.removeItem(STORAGE_KEY);
+                    setAnswers({});
+                    setCurrentQuestionIndex(0);
+                    setStep('welcome');
+                    setSelectedOption(null);
                 }
             };
 
+            const handleOptionSelect = (option) => {
+                setSelectedOption(option);
+                setStep(option === 'write' ? 'questions' : 'direct-upload');
+            };
+
             const handleAnswerChange = (e) => {
-                const q = writingQuestions[currentQuestionIndex];
-                setAnswers(prev => ({ ...prev, [q.id]: e.target.value }));
+                setAnswers({ ...answers, [WRITING_QUESTIONS[currentQuestionIndex].id]: e.target.value });
             };
 
             const nextQuestion = () => {
-                if (currentQuestionIndex < writingQuestions.length - 1) {
-                    setCurrentQuestionIndex(currentQuestionIndex + 1);
+                if (currentQuestionIndex < WRITING_QUESTIONS.length - 1) {
+                    setCurrentQuestionIndex(prev => prev + 1);
                 } else {
+                    prepareFinalText();
                     setStep('result');
                 }
             };
 
             const prevQuestion = () => {
                 if (currentQuestionIndex > 0) {
-                    setCurrentQuestionIndex(currentQuestionIndex - 1);
+                    setCurrentQuestionIndex(prev => prev - 1);
                 } else {
                     setStep('menu');
                 }
             };
 
-            const generateTextContent = () => {
-                const topic = answers.topic || '...';
-                const context = answers.context || '...';
-                const participants = answers.participants || '...';
-                const objective = answers.objective || '...';
-                const highlights = answers.highlights || '...';
-                const quotes = answers.quotes || '...';
-                const conclusion = answers.conclusion || '...';
-                const multimedia = answers.multimedia || '...';
-
-                const title = topic ? topic.toUpperCase() : 'SIN TÍTULO';
+            const prepareFinalText = () => {
+                const title = answers.topic ? answers.topic.toUpperCase() : 'SIN TÍTULO';
                 const date = new Date().toLocaleDateString();
+                
+                // Si ya existe texto editado, no lo sobrescribimos a menos que esté vacío
+                if (generatedText) return;
 
-                return `BORRADOR DE NOTICIA
+                const text = `BORRADOR DE NOTICIA
 =========================================
 TÍTULO: ${title}
 FECHA: ${date}
 
-INSTRUCCIONES:
-Lee, corrige y añade tu estilo personal antes de enviar.
-
------------------------------------------
-(TITULAR)
-${topic}: Una experiencia de aprendizaje fuera del aula
-
 (ENTRADILLA)
-${context}, nuestro centro llevó a cabo una actividad muy especial centrada en ${topic}. En esta ocasión, los protagonistas fueron ${participants}.
+${answers.context || '...'}, nuestro centro llevó a cabo una actividad centrada en ${answers.topic || '...'}. 
+Protagonistas: ${answers.participants || '...'}.
 
 (CUERPO)
-El propósito principal era: ${objective}. Para lograrlo, se organizó una agenda completa. ${highlights}.
+El objetivo era: ${answers.objective || '...'}. 
+Desarrollo: ${answers.highlights || '...'}.
 
 (DETALLES)
-No faltaron momentos para compartir. ${quotes}.
+La anécdota: ${answers.quotes || '...'}.
 
 (CIERRE)
-Para cerrar, podemos decir que ${conclusion}.
+Conclusión: ${answers.conclusion || '...'}.
 
 -----------------------------------------
-MULTIMEDIA: ${multimedia}
+MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
 =========================================`;
+                setGeneratedText(text);
+            };
+
+            const handleCopy = async () => {
+                try {
+                    await navigator.clipboard.writeText(generatedText);
+                    setShowCopiedToast(true);
+                    setTimeout(() => setShowCopiedToast(false), 2000);
+                } catch (err) {
+                    alert('No se pudo copiar automáticamente.');
+                }
             };
 
             const downloadTxt = () => {
                 const element = document.createElement("a");
-                const file = new Blob([generateTextContent()], {type: 'text/plain'});
+                const file = new Blob([generatedText], {type: 'text/plain'});
                 element.href = URL.createObjectURL(file);
                 element.download = `blog_borrador_${Date.now()}.txt`;
                 document.body.appendChild(element);
@@ -270,39 +249,19 @@ MULTIMEDIA: ${multimedia}
                 document.body.removeChild(element);
             };
 
-            const copyToClipboard = async () => {
-                try {
-                    await navigator.clipboard.writeText(generateTextContent());
-                    alert("Texto copiado al portapapeles. ¡Pégalo en tu documento o formulario!");
-                } catch (e) {
-                    alert("No se pudo copiar automáticamente. Descarga el .txt y copia desde ahí.");
-                }
-            };
+            // --- Vistas ---
 
-            // Componentes Visuales
-            const Background = ({ children }) => (
-                <div className="min-h-screen bg-slate-50 relative overflow-hidden font-sans text-slate-800">
-                    <div className="absolute top-[-10%] left-[-10%] w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob"></div>
-                    <div className="absolute top-[-10%] right-[-10%] w-96 h-96 bg-yellow-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000"></div>
-                    <div className="absolute bottom-[-20%] left-[20%] w-96 h-96 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000"></div>
-                    <div className="relative z-10 flex flex-col items-center justify-center min-h-screen p-4">
-                        {children}
-                    </div>
-                </div>
-            );
-
-            const Card = ({ children, className = "" }) => (
-                <div className={`bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl border border-white/50 w-full max-w-2xl overflow-hidden ${className}`}>
-                    {children}
-                </div>
-            );
-
-            // Renderizado Condicional
             if (step === 'welcome') {
                 return (
                     <Background>
-                        <Card className="text-center p-12 transform hover:scale-[1.01] transition-transform duration-500">
-                            <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-3xl mb-8 shadow-lg shadow-indigo-500/30 rotate-3 hover:rotate-6 transition-transform">
+                        <Card className="text-center p-12 relative">
+                             {/* Botón flotante de reset si hay datos antiguos pero estamos en welcome */}
+                            {Object.keys(answers).length > 0 && (
+                                <button onClick={() => setStep('menu')} className="absolute top-4 right-4 text-xs bg-slate-100 px-3 py-1 rounded-full text-slate-500 hover:bg-slate-200">
+                                    Recuperar sesión anterior
+                                </button>
+                            )}
+                            <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-3xl mb-8 shadow-lg shadow-indigo-500/30 rotate-3 hover:rotate-6 transition-transform duration-300">
                                 <BookOpen className="w-12 h-12 text-white" />
                             </div>
                             <h1 className="text-4xl md:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-violet-600 to-pink-600 mb-4">
@@ -312,13 +271,10 @@ MULTIMEDIA: ${multimedia}
                                 Convierte tus experiencias en noticias increíbles para el blog. 
                                 Te ayudaré a estructurar tus ideas en minutos.
                             </p>
-                            <button 
-                                onClick={handleStart}
-                                className="group relative inline-flex items-center justify-center px-8 py-4 font-bold text-white transition-all duration-200 bg-slate-900 font-lg rounded-2xl hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 shadow-xl hover:shadow-2xl hover:-translate-y-1"
-                            >
+                            <Button onClick={handleStart} className="text-lg px-8 py-4 shadow-xl hover:shadow-2xl hover:-translate-y-1">
                                 <span>Empezar ahora</span>
-                                <ChevronRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-                            </button>
+                                <ChevronRight className="w-5 h-5 ml-2" />
+                            </Button>
                         </Card>
                     </Background>
                 );
@@ -328,73 +284,39 @@ MULTIMEDIA: ${multimedia}
                 return (
                     <Background>
                         <Card className="p-8">
-                            <button 
-                                onClick={() => setStep('welcome')} 
-                                className="mb-6 text-slate-400 hover:text-slate-600 flex items-center gap-2 text-sm font-medium transition-colors"
-                                aria-label="Volver a la pantalla de bienvenida"
-                            >
-                                <ArrowLeft size={16} /> Atrás
-                            </button>
+                            <div className="flex justify-between items-center mb-8">
+                                <Button variant="ghost" onClick={() => setStep('welcome')} className="px-0">
+                                    <ArrowLeft size={16} /> Atrás
+                                </Button>
+                                <button onClick={handleReset} className="text-red-400 hover:text-red-600 p-2 rounded-full hover:bg-red-50 transition-colors" title="Borrar todo">
+                                    <Trash2 size={18} />
+                                </button>
+                            </div>
                             
-                            <h2 className="text-3xl font-bold text-slate-800 mb-8 text-center">¿Qué vas a enviar hoy?</h2>
+                            <h2 className="text-3xl font-bold text-slate-800 mb-2 text-center">¿Qué vas a enviar hoy?</h2>
+                            <p className="text-center text-slate-500 mb-8">Elige el formato de tu publicación</p>
                             
-                            <div className="grid gap-6">
-                                <button 
-                                    onClick={() => handleOptionSelect('write')}
-                                    className="group flex items-center p-5 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-xl hover:border-violet-200 transition-all duration-300 relative overflow-hidden"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-violet-50 to-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    <div className="relative flex items-center gap-6 w-full">
-                                        <div className="w-16 h-16 bg-violet-100 text-violet-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                                            <PenTool size={32} />
+                            <div className="grid gap-4">
+                                {[
+                                    { id: 'write', icon: PenTool, title: 'Crear Noticia', sub: 'Te ayudo a escribir el texto', color: 'violet' },
+                                    { id: 'media', icon: Camera, title: 'Solo Fotos / Vídeo', sub: 'Imágenes sin mucho texto', color: 'pink' },
+                                    { id: 'podcast', icon: Mic, title: 'Podcast / Audio', sub: 'Entrevistas o grabaciones', color: 'amber' }
+                                ].map((opt) => (
+                                    <button 
+                                        key={opt.id}
+                                        onClick={() => handleOptionSelect(opt.id)}
+                                        className={`group flex items-center p-4 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-md hover:border-${opt.color}-200 transition-all duration-200 text-left`}
+                                    >
+                                        <div className={`w-14 h-14 bg-${opt.color}-50 text-${opt.color}-600 rounded-xl flex items-center justify-center mr-4 group-hover:scale-110 transition-transform`}>
+                                            <opt.icon size={28} />
                                         </div>
-                                        <div className="text-left flex-1">
-                                            <span className="block text-xl font-bold text-slate-800 group-hover:text-violet-700 transition-colors">Crear Noticia</span>
-                                            <span className="text-slate-500 text-sm">Te ayudo a escribir el texto paso a paso</span>
+                                        <div className="flex-1">
+                                            <span className="block text-lg font-bold text-slate-800 group-hover:text-slate-900">{opt.title}</span>
+                                            <span className="text-slate-500 text-sm">{opt.sub}</span>
                                         </div>
-                                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-violet-600 group-hover:text-white transition-colors">
-                                            <ChevronRight size={18} />
-                                        </div>
-                                    </div>
-                                </button>
-
-                                <button 
-                                    onClick={() => handleOptionSelect('media')}
-                                    className="group flex items-center p-5 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-xl hover:border-pink-200 transition-all duration-300 relative overflow-hidden"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-pink-50 to-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    <div className="relative flex items-center gap-6 w-full">
-                                        <div className="w-16 h-16 bg-pink-100 text-pink-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                                            <Camera size={32} />
-                                        </div>
-                                        <div className="text-left flex-1">
-                                            <span className="block text-xl font-bold text-slate-800 group-hover:text-pink-700 transition-colors">Solo Fotos / Vídeo</span>
-                                            <span className="text-slate-500 text-sm">Subir imágenes sin texto largo</span>
-                                        </div>
-                                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-pink-600 group-hover:text-white transition-colors">
-                                            <ChevronRight size={18} />
-                                        </div>
-                                    </div>
-                                </button>
-
-                                <button 
-                                    onClick={() => handleOptionSelect('podcast')}
-                                    className="group flex items-center p-5 bg-white border border-slate-100 rounded-2xl shadow-sm hover:shadow-xl hover:border-amber-200 transition-all duration-300 relative overflow-hidden"
-                                >
-                                    <div className="absolute inset-0 bg-gradient-to-r from-amber-50 to-white opacity-0 group-hover:opacity-100 transition-opacity" />
-                                    <div className="relative flex items-center gap-6 w-full">
-                                        <div className="w-16 h-16 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                                            <Mic size={32} />
-                                        </div>
-                                        <div className="text-left flex-1">
-                                            <span className="block text-xl font-bold text-slate-800 group-hover:text-amber-700 transition-colors">Podcast / Audio</span>
-                                            <span className="text-slate-500 text-sm">Subir entrevistas o grabaciones</span>
-                                        </div>
-                                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                                            <ChevronRight size={18} />
-                                        </div>
-                                    </div>
-                                </button>
+                                        <ChevronRight className="text-slate-300 group-hover:text-slate-600" />
+                                    </button>
+                                ))}
                             </div>
                         </Card>
                     </Background>
@@ -402,80 +324,61 @@ MULTIMEDIA: ${multimedia}
             }
 
             if (step === 'questions') {
-                const q = writingQuestions[currentQuestionIndex];
-                const progress = ((currentQuestionIndex + 1) / writingQuestions.length) * 100;
-                const currentLength = (answers[q.id]?.length || 0);
+                const q = WRITING_QUESTIONS[currentQuestionIndex];
+                const progress = ((currentQuestionIndex + 1) / WRITING_QUESTIONS.length) * 100;
+                const hasAnswer = answers[q.id] && answers[q.id].trim().length > 0;
 
                 return (
                     <Background>
                         <Card className="flex flex-col min-h-[600px] w-full max-w-2xl">
+                            {/* Barra de Progreso */}
                             <div className="px-8 py-6 border-b border-slate-100 bg-slate-50/50">
                                 <div className="flex justify-between items-end mb-3">
                                     <span className="text-xs font-bold text-violet-600 tracking-wider uppercase bg-violet-100 px-2 py-1 rounded">
-                                        Paso {currentQuestionIndex + 1} de {writingQuestions.length}
+                                        Paso {currentQuestionIndex + 1} de {WRITING_QUESTIONS.length}
                                     </span>
-                                    <span className="text-xs font-semibold text-slate-400">{Math.round(progress)}%</span>
+                                    <button onClick={handleReset} className="text-slate-400 hover:text-red-500 text-xs flex items-center gap-1 transition-colors">
+                                        <RotateCcw size={12} /> Reiniciar
+                                    </button>
                                 </div>
                                 <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                                    <div 
-                                        className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500 ease-out"
-                                        style={{ width: `${progress}%` }}
-                                    />
+                                    <div className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500 ease-out" style={{ width: `${progress}%` }} />
                                 </div>
                             </div>
 
-                            <div className="flex-1 p-8 flex flex-col justify-center">
-                                <div className="flex items-center gap-4 mb-6 animate-fadeIn">
-                                    <div className="p-3 bg-slate-100 rounded-xl">
+                            {/* Área de Pregunta */}
+                            <div className="flex-1 p-8 flex flex-col justify-center animate-fadeIn key={currentQuestionIndex}">
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="p-3 bg-slate-100 rounded-xl shadow-sm">
                                         {q.icon}
                                     </div>
                                     <h2 className="text-2xl md:text-3xl font-bold text-slate-800">{q.question}</h2>
                                 </div>
                                 
-                                <div className="relative group">
-                                    <div className="absolute -inset-1 bg-gradient-to-r from-violet-200 to-pink-200 rounded-2xl blur opacity-25 group-focus-within:opacity-75 transition duration-500"></div>
-                                    <textarea
-                                        className="relative w-full p-6 bg-white border-2 border-slate-100 rounded-xl focus:border-violet-500 focus:ring-0 text-lg text-slate-700 placeholder:text-slate-300 resize-none h-48 transition-all shadow-sm"
-                                        placeholder={q.placeholder}
-                                        value={answers[q.id] || ''}
-                                        onChange={handleAnswerChange}
-                                        autoFocus
-                                    />
-                                </div>
+                                <textarea
+                                    className="w-full p-6 bg-white border-2 border-slate-100 rounded-xl focus:border-violet-500 focus:ring-4 focus:ring-violet-500/10 outline-none text-lg text-slate-700 placeholder:text-slate-300 resize-none h-48 transition-all shadow-inner"
+                                    placeholder={q.placeholder}
+                                    value={answers[q.id] || ''}
+                                    onChange={handleAnswerChange}
+                                    autoFocus
+                                />
 
-                                <div className="mt-2 flex justify-between text-xs text-slate-400">
-                                    <span>{currentLength} caracteres</span>
-                                    <span>Recomendado: 1–3 frases</span>
-                                </div>
-
-                                <div className="mt-6 flex items-start gap-2 text-slate-500 bg-slate-50 p-4 rounded-lg text-sm border border-slate-100">
-                                    <Sparkles className="w-5 h-5 text-yellow-500 flex-shrink-0" />
-                                    <p><span className="font-bold text-slate-700">Consejo:</span> {q.helper}</p>
+                                <div className="mt-6 flex items-start gap-3 bg-indigo-50 p-4 rounded-xl text-sm border border-indigo-100">
+                                    <Sparkles className="w-5 h-5 text-indigo-500 flex-shrink-0 mt-0.5" />
+                                    <p className="text-indigo-900"><span className="font-bold">Consejo:</span> {q.helper}</p>
                                 </div>
                             </div>
 
+                            {/* Footer Navegación */}
                             <div className="p-6 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                                <button 
-                                    onClick={prevQuestion}
-                                    aria-label="Volver a la pregunta anterior"
-                                    className="px-6 py-3 text-slate-500 font-bold hover:text-slate-800 transition-colors flex items-center gap-2"
-                                >
+                                <Button variant="ghost" onClick={prevQuestion}>
                                     <ArrowLeft size={20} /> <span className="hidden sm:inline">Anterior</span>
-                                </button>
+                                </Button>
                                 
-                                <button 
-                                    onClick={nextQuestion}
-                                    disabled={!answers[q.id]}
-                                    aria-label={currentQuestionIndex === writingQuestions.length - 1 ? "Finalizar cuestionario" : "Ir a la siguiente pregunta"}
-                                    className={`flex items-center gap-2 px-8 py-3 rounded-xl font-bold text-white shadow-lg transition-all transform ${
-                                        !answers[q.id] 
-                                        ? 'bg-slate-300 cursor-not-allowed shadow-none' 
-                                        : 'bg-slate-900 hover:bg-slate-800 hover:scale-105 hover:shadow-xl'
-                                    }`}
-                                >
-                                    {currentQuestionIndex === writingQuestions.length - 1 ? 'Finalizar' : 'Siguiente'}
-                                    {currentQuestionIndex === writingQuestions.length - 1 ? <CheckCircle size={20} /> : <ChevronRight size={20} />}
-                                </button>
+                                <Button onClick={nextQuestion} disabled={!hasAnswer}>
+                                    {currentQuestionIndex === WRITING_QUESTIONS.length - 1 ? 'Finalizar' : 'Siguiente'}
+                                    {currentQuestionIndex === WRITING_QUESTIONS.length - 1 ? <CheckCircle size={20} /> : <ChevronRight size={20} />}
+                                </Button>
                             </div>
                         </Card>
                     </Background>
@@ -486,127 +389,113 @@ MULTIMEDIA: ${multimedia}
                 return (
                     <Background>
                         <Card className="w-full max-w-3xl">
-                            <div className="bg-gradient-to-r from-emerald-500 to-teal-500 p-8 text-center text-white relative overflow-hidden">
-                                <div className="absolute top-0 left-0 w-full h-full bg-white opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-                                <CheckCircle className="w-16 h-16 mx-auto mb-4 relative z-10 drop-shadow-md" />
+                            {/* Header Éxito */}
+                            <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-8 text-center text-white relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                                <CheckCircle className="w-16 h-16 mx-auto mb-4 drop-shadow-md animate-bounce" />
                                 <h2 className="text-3xl font-bold relative z-10">¡Borrador Listo!</h2>
-                                <p className="opacity-90 relative z-10">Casi has terminado. Sigue estos dos pasos.</p>
+                                <p className="opacity-90 relative z-10 mt-2">Revisa el texto, cópialo y envíalo.</p>
                             </div>
 
                             <div className="p-8 grid md:grid-cols-2 gap-8">
+                                {/* Columna Izquierda: Editor */}
                                 <div className="space-y-4">
-                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Vista Previa</h3>
-                                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-200 text-xs md:text-sm text-slate-700 h-64 overflow-y-auto font-mono shadow-inner custom-scrollbar whitespace-pre-wrap">
-                                        {generateTextContent()}
+                                    <div className="flex justify-between items-center">
+                                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tu Texto (Editable)</h3>
+                                        <span className="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-500">Puedes escribir aquí</span>
                                     </div>
+                                    <div className="relative group">
+                                        <textarea 
+                                            value={generatedText}
+                                            onChange={(e) => setGeneratedText(e.target.value)}
+                                            className="w-full h-80 p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm leading-relaxed text-slate-700 font-mono resize-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none custom-scrollbar shadow-inner"
+                                        />
+                                        <div className="absolute bottom-4 right-4 flex gap-2">
+                                            <button 
+                                                onClick={handleCopy}
+                                                className="bg-white/90 backdrop-blur shadow-md hover:shadow-lg border border-slate-200 text-slate-700 p-2 rounded-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2 font-bold text-xs"
+                                                title="Copiar texto"
+                                            >
+                                                {showCopiedToast ? <CheckCircle size={16} className="text-emerald-500" /> : <Copy size={16} />}
+                                                {showCopiedToast ? '¡Copiado!' : 'Copiar'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button onClick={downloadTxt} className="text-xs text-slate-400 hover:text-slate-600 underline flex items-center gap-1 mx-auto">
+                                        <Download size={12} /> Descargar respaldo en .txt
+                                    </button>
                                 </div>
 
-                                <div className="flex flex-col justify-center space-y-4">
-                                    <div className="bg-blue-50 p-4 rounded-xl flex items-start gap-3">
-                                        <div className="bg-blue-100 p-2 rounded-lg text-blue-600 font-bold">1</div>
-                                        <div>
-                                            <h4 className="font-bold text-blue-900">Descarga o copia tu texto</h4>
-                                            <p className="text-sm text-blue-700">Guárdalo o cópialo para pegarlo donde haga falta.</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <button 
-                                        onClick={downloadTxt}
-                                        className="w-full flex items-center justify-center gap-3 bg-white border-2 border-slate-200 hover:border-slate-800 text-slate-800 font-bold py-3 px-4 rounded-xl transition-all hover:bg-slate-50 group"
-                                    >
-                                        <Download size={20} className="group-hover:translate-y-1 transition-transform" /> Descargar .txt
-                                    </button>
-
-                                    <button 
-                                        onClick={copyToClipboard}
-                                        className="w-full flex items-center justify-center gap-3 bg-slate-900 text-white font-bold py-3 px-4 rounded-xl hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1"
-                                    >
-                                        Copiar texto <FileText size={18} />
-                                    </button>
-
-                                    <div className="h-px bg-slate-100 my-2"></div>
-
-                                    <div className="bg-indigo-50 p-4 rounded-xl flex items-start gap-3">
-                                        <div className="bg-indigo-100 p-2 rounded-lg text-indigo-600 font-bold">2</div>
-                                        <div>
-                                            <h4 className="font-bold text-indigo-900">Envía el formulario</h4>
-                                            <p className="text-sm text-indigo-700">Sube tus archivos y pega el texto.</p>
-                                        </div>
+                                {/* Columna Derecha: Acciones */}
+                                <div className="flex flex-col justify-center space-y-6">
+                                    <div className="bg-indigo-50 border border-indigo-100 p-5 rounded-2xl">
+                                        <h4 className="font-bold text-indigo-900 mb-2 flex items-center gap-2">
+                                            <span className="bg-indigo-200 text-indigo-700 w-6 h-6 rounded-full flex items-center justify-center text-xs">1</span>
+                                            Siguientes pasos:
+                                        </h4>
+                                        <ul className="text-sm text-indigo-800 space-y-2 ml-2">
+                                            <li className="flex gap-2"><CheckCircle size={14} className="mt-0.5 opacity-50"/> Copia el texto de la izquierda.</li>
+                                            <li className="flex gap-2"><CheckCircle size={14} className="mt-0.5 opacity-50"/> Abre el Formulario Google.</li>
+                                            <li className="flex gap-2"><CheckCircle size={14} className="mt-0.5 opacity-50"/> Pega el texto y sube tus fotos.</li>
+                                        </ul>
                                     </div>
 
                                     <a 
-                                        href={googleFormUrl}
+                                        href={GOOGLE_FORM_URL}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="w-full flex items-center justify-center gap-3 bg-slate-900 text-white font-bold py-3 px-4 rounded-xl hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1"
+                                        className="group w-full flex items-center justify-center gap-3 bg-slate-900 text-white font-bold py-4 px-6 rounded-xl hover:bg-slate-800 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
                                     >
-                                        Ir al Formulario <Send size={18} />
+                                        Ir al Formulario <Send size={20} className="group-hover:translate-x-1 transition-transform"/>
                                     </a>
+
+                                    <button onClick={() => setStep('menu')} className="text-slate-400 hover:text-slate-600 text-sm font-medium transition-colors">
+                                        Volver al inicio
+                                    </button>
                                 </div>
                             </div>
-                            <button 
-                                onClick={() => setStep('menu')} 
-                                className="w-full py-4 bg-slate-50 text-slate-400 hover:text-slate-600 text-sm font-medium border-t border-slate-100 transition-colors"
-                            >
-                                Volver al inicio
-                            </button>
                         </Card>
                     </Background>
                 );
             }
 
+            // Vista "Subida Directa" (Fotos/Podcast)
             if (step === 'direct-upload') {
                 const isPodcast = selectedOption === 'podcast';
-                const accentColor = isPodcast ? 'text-amber-500' : 'text-pink-500';
-                const bgColor = isPodcast ? 'bg-amber-500' : 'bg-pink-500';
-                const lightBg = isPodcast ? 'bg-amber-50' : 'bg-pink-50';
+                const styles = isPodcast 
+                    ? { bg: 'bg-amber-500', light: 'bg-amber-50', text: 'text-amber-500', btn: 'bg-amber-500 hover:bg-amber-600' }
+                    : { bg: 'bg-pink-500', light: 'bg-pink-50', text: 'text-pink-500', btn: 'bg-pink-500 hover:bg-pink-600' };
 
                 return (
                     <Background>
                         <Card className="max-w-md">
-                            <div className={`${bgColor} p-8 text-center text-white`}>
+                            <div className={`${styles.bg} p-8 text-center text-white`}>
                                 {isPodcast ? <Music className="w-16 h-16 mx-auto mb-4 animate-bounce" /> : <Camera className="w-16 h-16 mx-auto mb-4 animate-pulse" />}
-                                <h2 className="text-2xl font-bold">
-                                    {isPodcast ? 'Subir Podcast' : 'Subir Imágenes'}
-                                </h2>
+                                <h2 className="text-2xl font-bold">{isPodcast ? 'Subir Podcast' : 'Subir Imágenes'}</h2>
                             </div>
                             
                             <div className="p-8">
                                 <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                    <CheckCircle className={`w-5 h-5 ${accentColor}`} /> Checklist Rápido:
+                                    <CheckCircle className={`w-5 h-5 ${styles.text}`} /> Checklist Rápido:
                                 </h3>
                                 
                                 <div className="space-y-3 mb-8">
-                                    <div className={`p-4 rounded-xl ${lightBg} flex gap-3 text-sm text-slate-700`}>
+                                    <div className={`p-4 rounded-xl ${styles.light} flex gap-3 text-sm text-slate-700`}>
                                         <div className="min-w-[4px] bg-slate-800 rounded-full opacity-20"></div>
-                                        {isPodcast 
-                                        ? "Revisa que no haya ruido de fondo y las voces se entiendan." 
-                                        : "Elige solo las 5-10 mejores fotos. ¡Enfoque y luz!"}
+                                        {isPodcast ? "Revisa que no haya ruido de fondo." : "Elige solo las 5-10 mejores fotos."}
                                     </div>
-                                    <div className={`p-4 rounded-xl ${lightBg} flex gap-3 text-sm text-slate-700`}>
+                                    <div className={`p-4 rounded-xl ${styles.light} flex gap-3 text-sm text-slate-700`}>
                                         <div className="min-w-[4px] bg-slate-800 rounded-full opacity-20"></div>
-                                        {isPodcast
-                                        ? "Ten apuntados los nombres de los entrevistados."
-                                        : "Prepara un pequeño pie de foto explicando qué se ve."}
+                                        {isPodcast ? "Ten a mano los nombres de los entrevistados." : "Prepara un pequeño pie de foto."}
                                     </div>
                                 </div>
 
-                                <a 
-                                    href={googleFormUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className={`w-full flex items-center justify-center gap-2 font-bold py-4 px-6 rounded-xl transition shadow-lg text-white hover:-translate-y-1 ${
-                                        isPodcast ? 'bg-amber-500 hover:bg-amber-600' : 'bg-pink-500 hover:bg-pink-600'
-                                    }`}
-                                >
+                                <a href={GOOGLE_FORM_URL} target="_blank" rel="noopener noreferrer" className={`w-full flex items-center justify-center gap-2 font-bold py-4 px-6 rounded-xl transition shadow-lg text-white hover:-translate-y-1 ${styles.btn}`}>
                                     Abrir Formulario <Send size={20} />
                                 </a>
                                 
-                                <button 
-                                    onClick={() => setStep('menu')} 
-                                    className="mt-6 text-slate-400 hover:text-slate-600 text-sm w-full text-center"
-                                >
-                                    Cancelar y volver
+                                <button onClick={() => setStep('menu')} className="mt-6 text-slate-400 hover:text-slate-600 text-sm w-full">
+                                    Cancelar
                                 </button>
                             </div>
                         </Card>
