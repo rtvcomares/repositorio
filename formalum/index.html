@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asistente Creativo del Blog 3.0</title>
+    <title>Asistente Creativo del Blog - Versión Archivos</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -75,14 +75,15 @@
         import { 
             BookOpen, PenTool, Mic, Camera, Download, ChevronRight, 
             CheckCircle, ArrowLeft, Send, Sparkles, FileText, Music, 
-            HelpCircle, Share2, Copy, Trash2, RotateCcw, Lock, LogOut, PlusCircle
+            HelpCircle, Share2, Copy, Trash2, RotateCcw, Lock, LogOut, PlusCircle, FileUp
         } from 'lucide-react';
 
         // --- CONFIGURACIÓN ---
         const GOOGLE_FORM_URL = "https://forms.gle/8BRDrCGTU4NEjw2y7";
-        const STORAGE_KEY = "blog_wizard_data_v3";
-        const PASSWORD_ACCESS = "blog"; // <--- CAMBIA ESTO POR LA CONTRASEÑA QUE QUIERAS
+        const STORAGE_KEY = "blog_wizard_final_v1";
+        const PASSWORD_ACCESS = "blog"; 
 
+        // Preguntas corregidas (Lenguaje "Nosotros")
         const WRITING_QUESTIONS = [
             { id: 'topic', icon: <BookOpen className="w-6 h-6 text-indigo-500" />, question: "¿Título o tema de la actividad?", helper: "Ej: Taller de Robótica, Visita al Botánico...", placeholder: "Escribe el nombre aquí..." },
             { id: 'context', icon: <Share2 className="w-6 h-6 text-pink-500" />, question: "¿Cuándo y dónde?", helper: "Ej: 'El pasado viernes en el laboratorio'.", placeholder: "El evento tuvo lugar..." },
@@ -91,7 +92,7 @@
             { id: 'highlights', icon: <FileText className="w-6 h-6 text-emerald-500" />, question: "¿Qué actividades hicimos?", helper: "Cuenta los pasos principales.", placeholder: "Primero hicimos..., luego..." },
             { id: 'quotes', icon: <Mic className="w-6 h-6 text-orange-500" />, question: "¿Frase o anécdota destacada?", helper: "Algo memorable o divertido.", placeholder: "Lo más comentado fue..." },
             { id: 'conclusion', icon: <CheckCircle className="w-6 h-6 text-purple-500" />, question: "¿Conclusión final?", helper: "¿Opinión personal? ¿Repetiríais?", placeholder: "En definitiva, fue..." },
-            { id: 'multimedia', icon: <Camera className="w-6 h-6 text-red-500" />, question: "Archivos adjuntos", helper: "¿Qué fotos/audios vas a subir al formulario?", placeholder: "Adjuntaré fotos de..." }
+            { id: 'multimedia', icon: <Camera className="w-6 h-6 text-red-500" />, question: "Archivos adjuntos", helper: "¿Qué fotos/audios vas a subir junto con este texto?", placeholder: "Adjuntaré fotos de..." }
         ];
 
         // --- Componentes UI ---
@@ -116,9 +117,7 @@
             const baseStyles = "flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold transition-all transform active:scale-95";
             const variants = {
                 primary: "bg-slate-900 text-white hover:bg-slate-800 hover:shadow-lg disabled:bg-slate-300 disabled:cursor-not-allowed disabled:shadow-none",
-                secondary: "bg-white text-slate-700 border-2 border-slate-200 hover:border-slate-800 hover:bg-slate-50",
                 ghost: "text-slate-500 hover:text-slate-800 hover:bg-slate-100/50",
-                danger: "bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 hover:border-red-200"
             };
             return (
                 <button onClick={onClick} disabled={disabled} className={`${baseStyles} ${variants[variant]} ${className}`}>
@@ -139,9 +138,8 @@
             const [answers, setAnswers] = useState({});
             const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
             const [generatedText, setGeneratedText] = useState('');
-            const [showCopiedToast, setShowCopiedToast] = useState(false);
 
-            // Cargar datos al inicio
+            // Cargar datos
             useEffect(() => {
                 const savedData = localStorage.getItem(STORAGE_KEY);
                 if (savedData) {
@@ -155,7 +153,7 @@
                 }
             }, []);
 
-            // Guardar datos al cambiar
+            // Guardar datos
             useEffect(() => {
                 if (isAuthenticated && step !== 'welcome') {
                     localStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -167,7 +165,7 @@
                 }
             }, [step, answers, selectedOption, currentQuestionIndex, isAuthenticated]);
 
-            // --- Lógica de Login y Reset ---
+            // --- Lógica ---
 
             const handleLogin = (e) => {
                 e.preventDefault();
@@ -187,7 +185,7 @@
                     setCurrentQuestionIndex(0);
                     setGeneratedText('');
                     setSelectedOption(null);
-                    setStep('menu'); // Volvemos al menú directamente
+                    setStep('menu');
                     window.scrollTo(0,0);
                 }
             };
@@ -197,15 +195,17 @@
                  setPasswordInput("");
             };
 
-            // --- Lógica del Flujo ---
             const handleStart = () => setStep('menu');
+            
             const handleOptionSelect = (option) => {
                 setSelectedOption(option);
                 setStep(option === 'write' ? 'questions' : 'direct-upload');
             };
+
             const handleAnswerChange = (e) => {
                 setAnswers({ ...answers, [WRITING_QUESTIONS[currentQuestionIndex].id]: e.target.value });
             };
+
             const nextQuestion = () => {
                 if (currentQuestionIndex < WRITING_QUESTIONS.length - 1) {
                     setCurrentQuestionIndex(prev => prev + 1);
@@ -214,6 +214,7 @@
                     setStep('result');
                 }
             };
+
             const prevQuestion = () => {
                 if (currentQuestionIndex > 0) {
                     setCurrentQuestionIndex(prev => prev - 1);
@@ -252,21 +253,13 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                 setGeneratedText(text);
             };
 
-            const handleCopy = async () => {
-                try {
-                    await navigator.clipboard.writeText(generatedText);
-                    setShowCopiedToast(true);
-                    setTimeout(() => setShowCopiedToast(false), 2000);
-                } catch (err) {
-                    alert('Selecciona el texto manualmente para copiarlo.');
-                }
-            };
-
             const downloadTxt = () => {
                 const element = document.createElement("a");
                 const file = new Blob([generatedText], {type: 'text/plain'});
                 element.href = URL.createObjectURL(file);
-                element.download = `blog_borrador_${Date.now()}.txt`;
+                // Nombre de archivo seguro
+                const safeTitle = (answers.topic || 'noticia').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                element.download = `blog_${safeTitle}.txt`;
                 document.body.appendChild(element);
                 element.click();
                 document.body.removeChild(element);
@@ -274,7 +267,7 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
 
             // --- VISTAS ---
 
-            // 1. LOGIN / PORTADA
+            // 1. LOGIN
             if (!isAuthenticated) {
                 return (
                     <Background>
@@ -304,7 +297,7 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                                     Entrar
                                 </Button>
                             </form>
-                            <p className="mt-6 text-xs text-slate-400">Pista: la clave es 'blog'</p>
+                            <p className="mt-6 text-xs text-slate-400">Pista: la clave es '{PASSWORD_ACCESS}'</p>
                         </Card>
                     </Background>
                 );
@@ -330,7 +323,7 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                                 Reporteros Escolares
                             </h1>
                             <p className="text-lg text-slate-600 mb-10 max-w-md mx-auto leading-relaxed">
-                                Convierte tus experiencias en noticias increíbles para el blog. 
+                                Redacta la noticia, descarga el archivo y súbelo al formulario.
                             </p>
                             <div className="flex flex-col gap-4">
                                 <Button onClick={handleStart} className="text-lg px-8 py-4 shadow-xl hover:shadow-2xl hover:-translate-y-1">
@@ -352,7 +345,6 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                                 <Button variant="ghost" onClick={() => setStep('welcome')} className="px-0">
                                     <ArrowLeft size={16} /> Atrás
                                 </Button>
-                                {/* Botón Reset Visible */}
                                 <button 
                                     onClick={handleFullReset} 
                                     className="flex items-center gap-2 text-red-400 hover:text-red-600 px-3 py-2 rounded-lg hover:bg-red-50 transition-colors text-sm font-medium" 
@@ -363,13 +355,13 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                             </div>
                             
                             <h2 className="text-3xl font-bold text-slate-800 mb-2 text-center">Menú Principal</h2>
-                            <p className="text-center text-slate-500 mb-8">Elige el formato de tu publicación</p>
+                            <p className="text-center text-slate-500 mb-8">¿Qué vas a subir al formulario?</p>
                             
                             <div className="grid gap-4">
                                 {[
-                                    { id: 'write', icon: PenTool, title: 'Crear Noticia', sub: 'Te ayudo a escribir el texto', color: 'violet' },
-                                    { id: 'media', icon: Camera, title: 'Solo Fotos / Vídeo', sub: 'Imágenes sin mucho texto', color: 'pink' },
-                                    { id: 'podcast', icon: Mic, title: 'Podcast / Audio', sub: 'Entrevistas o grabaciones', color: 'amber' }
+                                    { id: 'write', icon: PenTool, title: 'Crear Noticia (Texto)', sub: 'Genera un archivo .txt para subir', color: 'violet' },
+                                    { id: 'media', icon: Camera, title: 'Solo Fotos / Vídeo', sub: 'Si no hay noticia escrita', color: 'pink' },
+                                    { id: 'podcast', icon: Mic, title: 'Podcast / Audio', sub: 'Archivos de sonido', color: 'amber' }
                                 ].map((opt) => (
                                     <button 
                                         key={opt.id}
@@ -458,14 +450,13 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                                 <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
                                 <CheckCircle className="w-16 h-16 mx-auto mb-4 drop-shadow-md animate-bounce" />
                                 <h2 className="text-3xl font-bold relative z-10">¡Borrador Listo!</h2>
-                                <p className="opacity-90 relative z-10 mt-2">Revisa, copia y envía.</p>
+                                <p className="opacity-90 relative z-10 mt-2">Ahora genera el archivo para subirlo.</p>
                             </div>
 
                             <div className="p-8 grid md:grid-cols-2 gap-8">
                                 <div className="space-y-4">
                                     <div className="flex justify-between items-center">
-                                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tu Texto (Editable)</h3>
-                                        <span className="text-[10px] bg-slate-100 px-2 py-1 rounded text-slate-500">Puedes escribir aquí</span>
+                                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Vista Previa (Editable)</h3>
                                     </div>
                                     <div className="relative group">
                                         <textarea 
@@ -473,40 +464,38 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                                             onChange={(e) => setGeneratedText(e.target.value)}
                                             className="w-full h-80 p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm leading-relaxed text-slate-700 font-mono resize-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none custom-scrollbar shadow-inner"
                                         />
-                                        <div className="absolute bottom-4 right-4 flex gap-2">
-                                            <button 
-                                                onClick={handleCopy}
-                                                className="bg-white/90 backdrop-blur shadow-md hover:shadow-lg border border-slate-200 text-slate-700 p-2 rounded-lg transition-all hover:scale-105 active:scale-95 flex items-center gap-2 font-bold text-xs"
-                                                title="Copiar texto"
-                                            >
-                                                {showCopiedToast ? <CheckCircle size={16} className="text-emerald-500" /> : <Copy size={16} />}
-                                                {showCopiedToast ? '¡Copiado!' : 'Copiar'}
-                                            </button>
-                                        </div>
                                     </div>
-                                    <button onClick={downloadTxt} className="text-xs text-slate-400 hover:text-slate-600 underline flex items-center gap-1 mx-auto">
-                                        <Download size={12} /> Descargar respaldo en .txt
-                                    </button>
                                 </div>
 
                                 <div className="flex flex-col justify-center space-y-4">
-                                    <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl">
-                                        <h4 className="font-bold text-indigo-900 mb-2 text-sm">Pasos para terminar:</h4>
-                                        <ul className="text-xs text-indigo-800 space-y-1 ml-1">
-                                            <li className="flex gap-2">1. Copia el texto.</li>
-                                            <li className="flex gap-2">2. Abre el Formulario Google.</li>
-                                            <li className="flex gap-2">3. Pega y sube las fotos.</li>
-                                        </ul>
-                                    </div>
+                                    {/* Pasos Claros */}
+                                    <div className="bg-blue-50 border border-blue-100 p-5 rounded-2xl space-y-4">
+                                        <div className="flex items-center gap-3">
+                                            <span className="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">1</span>
+                                            <p className="text-blue-900 text-sm font-medium">Descarga el archivo de texto.</p>
+                                        </div>
+                                        <button 
+                                            onClick={downloadTxt}
+                                            className="w-full flex items-center justify-center gap-2 bg-white border border-blue-200 text-blue-700 font-bold py-3 px-4 rounded-xl hover:bg-blue-50 transition-all shadow-sm"
+                                        >
+                                            <Download size={18} /> Descargar .txt
+                                        </button>
+                                        
+                                        <div className="h-px bg-blue-200/50"></div>
 
-                                    <a 
-                                        href={GOOGLE_FORM_URL}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="group w-full flex items-center justify-center gap-3 bg-slate-900 text-white font-bold py-3 px-6 rounded-xl hover:bg-slate-800 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
-                                    >
-                                        Ir al Formulario <Send size={18} className="group-hover:translate-x-1 transition-transform"/>
-                                    </a>
+                                        <div className="flex items-center gap-3">
+                                            <span className="bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">2</span>
+                                            <p className="text-blue-900 text-sm font-medium">Sube el archivo al formulario.</p>
+                                        </div>
+                                        <a 
+                                            href={GOOGLE_FORM_URL}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="w-full flex items-center justify-center gap-2 bg-slate-900 text-white font-bold py-3 px-6 rounded-xl hover:bg-slate-800 transition-all shadow-lg"
+                                        >
+                                            Ir al Formulario <Send size={18} />
+                                        </a>
+                                    </div>
 
                                     <div className="h-px bg-slate-100 my-2"></div>
 
@@ -514,7 +503,7 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                                         onClick={handleFullReset}
                                         className="w-full flex items-center justify-center gap-2 text-slate-500 hover:text-emerald-600 bg-slate-50 hover:bg-emerald-50 py-3 px-4 rounded-xl font-bold transition-colors border border-slate-200 hover:border-emerald-200"
                                     >
-                                        <PlusCircle size={18} /> ✨ Finalizar y crear otro
+                                        <PlusCircle size={18} /> ✨ Finalizar y empezar otro
                                     </button>
                                 </div>
                             </div>
@@ -523,7 +512,7 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                 );
             }
 
-            // 6. UPLOAD DIRECTO
+            // 6. UPLOAD DIRECTO (Fotos/Podcast)
             if (step === 'direct-upload') {
                 const isPodcast = selectedOption === 'podcast';
                 const styles = isPodcast 
@@ -540,18 +529,18 @@ MULTIMEDIA: ${answers.multimedia || 'Ninguno'}
                             
                             <div className="p-8">
                                 <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                                    <CheckCircle className={`w-5 h-5 ${styles.text}`} /> Lista de verificación:
+                                    <CheckCircle className={`w-5 h-5 ${styles.text}`} /> Antes de ir al formulario:
                                 </h3>
                                 
                                 <div className="space-y-3 mb-8">
                                     <div className={`p-4 rounded-xl ${styles.light} flex gap-3 text-sm text-slate-700`}>
                                         <div className="min-w-[4px] bg-slate-800 rounded-full opacity-20"></div>
-                                        {isPodcast ? "Revisa que no haya ruido de fondo." : "Elige solo las 5-10 mejores fotos."}
+                                        <p>Asegúrate de tener tus archivos {isPodcast ? "(MP3/WAV)" : "(JPG/PNG)"} listos en este dispositivo.</p>
                                     </div>
                                 </div>
 
                                 <a href={GOOGLE_FORM_URL} target="_blank" rel="noopener noreferrer" className={`w-full flex items-center justify-center gap-2 font-bold py-4 px-6 rounded-xl transition shadow-lg text-white hover:-translate-y-1 ${styles.btn}`}>
-                                    Abrir Formulario <Send size={20} />
+                                    Ir a Subir Archivos <FileUp size={20} />
                                 </a>
                                 
                                 <button onClick={() => setStep('menu')} className="mt-6 text-slate-400 hover:text-slate-600 text-sm w-full">
